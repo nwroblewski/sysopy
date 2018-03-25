@@ -13,6 +13,7 @@
 #include <time.h>
 #include <zconf.h>
 #include <sys/times.h>
+#include <sys/wait.h>
 
 int launch_command(char * command){
     //defining a char * [] used by execvp command 
@@ -38,7 +39,8 @@ int batch_interprete(char * path){
     char * lineptr = malloc(sizeof(char) * buffer);
     char *const to_exec = malloc(sizeof(char) * buffer);
     int i = 1;
-
+    int status;
+    fseek(batch_commands,0,0);
     while((checker = getline(&lineptr,&buffer,batch_commands) > 0 )){    
         pid_t proc;
         
@@ -46,12 +48,19 @@ int batch_interprete(char * path){
             launch_command(lineptr);
             exit(0);
         }
+        wait(&status);
+        if(status){
+            exit(1);
+        }
     }
     if(checker < 0 ){
         perror("There was an error while reading from file!");
         return(-1);
     }
+
+    fclose(batch_commands);
     return 1;
+    
 }
 
 
