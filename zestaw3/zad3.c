@@ -71,7 +71,7 @@ int batch_interprete(char * path,char *time, char* memo){
         }
         wait(&status);
         if(status){
-            printf("%s failed! \n",params[0]);
+            printf("\n %s failed! \n",params[0]);
             exit(1);
         }
         struct rusage usage_1;
@@ -83,7 +83,7 @@ int batch_interprete(char * path,char *time, char* memo){
         usage_0 = usage_1;
 
         printf("%s \n", params[0]);
-        printf("USER TIME: %d.%d  and  SYSTEM TIME: %d.%d \n",usec.tv_sec,usec.tv_usec,ssec.tv_sec,ssec.tv_usec);
+        printf("USER TIME: %d.%d  and  SYSTEM TIME: %d.%d  MEMO USED: %d \n",usec.tv_sec,usec.tv_usec,ssec.tv_sec,ssec.tv_usec,usage_1.ru_maxrss);
 
 
     }
