@@ -15,42 +15,41 @@
 #include <sys/times.h>
 #include <sys/wait.h>
 
-int launch_command(char * command){
-    //defining a char * [] used by execvp command 
-    char * prepared[] = {
-        "/bin/sh",
-        "-c",
-        command,
-        NULL
-    };
-    if(execvp(prepared[0],prepared) < 0){
-        perror("Something went wrong when executing a command!");
-        exit(1);
-    }  
-}
 
-//processess a file with bash commands to be executed
 int batch_interprete(char * path){
-    FILE* batch_commands;
-    batch_commands = fopen(path,"r"); 
-    
+    FILE* file;
+    file = fopen(path,"r"); 
+    if(!file){
+        printf("Couldn't open a file! \n");
+        return 1;
+    }
+    int arg_no;
     ssize_t checker;
-    size_t buffer = 256;
-    char * lineptr = malloc(sizeof(char) * buffer);
-    char *const to_exec = malloc(sizeof(char) * buffer);
-    int i = 1;
+    size_t buffer_size = 256;
+    char * params[48];
+    char * lineptr = malloc(sizeof(char) * buffer_size);
+   // char *const to_exec = malloc(sizeof(char) * buffer);s
     int status;
-    fseek(batch_commands,0,0);
-    while((checker = getline(&lineptr,&buffer,batch_commands) > 0 )){    
-        pid_t proc;
-        
-        if(proc = fork() == 0){
-            launch_command(lineptr);
-            exit(0);
+    fseek(file,0,0);
+    while((checker = getline(&lineptr,&buffer_size,file) > 0 )){    
+        arg_no = 0;
+        while((params[arg_no] = strtok(arg_no == 0 ? lineptr : NULL, " \n\t")) != NULL){
+            arg_no++;
+            if(arg_no >= 48){
+                printf("You provided too many arguments! \n");
+                return -1;
+            }
         }
+        pid_t proc;
+        if((proc = fork()) == 0 ){
+            execvp(params[0],params);
+        }
+
         wait(&status);
         if(status){
+            printf("%s failed!",params[0]);
             exit(1);
+        
         }
     }
     if(checker < 0 ){
@@ -58,15 +57,18 @@ int batch_interprete(char * path){
         return(-1);
     }
 
-    fclose(batch_commands);
+    fclose(file);
     return 1;
     
 }
 
 
 int main(int argc, char** argv){
-
-    if(batch_interprete("/home/mikolaj/SYSOPS/test.txt") < 0 ){
+    if(argc < 2){
+        printf("TOO FEW ARGUMENTS PROVIDED! \n");
+        return 1;
+    }
+    if(batch_interprete(argv[1]) < 0 ){
         perror("ten getline to chyba jednak nie działa :/");
         exit(1);
     }
