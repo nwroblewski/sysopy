@@ -30,7 +30,7 @@ int limits(char * time_limit, char * memo){
     memo_limit.rlim_max =  (rlim_t) memory * 1024 * 1024; //converted from bytes to megabytes
     memo_limit.rlim_cur =  (rlim_t) memory * 1024 * 1024;
 
-    if(setrlimit(RLIMIT_DATA,&memo_limit) != 0){
+    if(setrlimit(RLIMIT_AS,&memo_limit) != 0){
         printf("SOMETHING FAILED WHEN SETTING MEMORY LIMIT!1111111!!!! \n");
         return -1;
     }
