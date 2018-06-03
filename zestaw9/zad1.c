@@ -34,15 +34,18 @@ pthread_cond_t buff_full = PTHREAD_COND_INITIALIZER;
 
 void *client(){
     while(1){
-        int check;
         pthread_mutex_lock(&buff_mutex);
-        if(inside == 0){
+        while(inside == 0){
             pthread_cond_wait(&buff_empty,&buff_mutex);
         }
-            char *line = malloc(sizeof(char) * 1024);
-            strcpy(line,buffer[consumer_pos]);
+    
+        char *line = malloc(sizeof(char) * 512);
+        strcpy(line,buffer[consumer_pos]);
 
-        if(1){
+
+        if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = '\0';
+        if(strlen(line) != 1){
+            int check;
             switch(view_mode){
                 case 0: check = (strlen(line) == L); 
                 break;
@@ -62,7 +65,6 @@ void *client(){
         if(inside == N - 1) pthread_cond_broadcast(&buff_full);
         pthread_mutex_unlock(&buff_mutex);
     }
-    return NULL;
 }
 
 
@@ -71,9 +73,10 @@ void *producer(){
     char *line = NULL;
     while(1){
         pthread_mutex_lock(&buff_mutex);
-        if(inside >= N){
+        while(inside == N){
             pthread_cond_wait(&buff_full,&buff_mutex);
         }
+
         if(getline(&line,&size,file_handle) <=0){
             pthread_mutex_unlock(&buff_mutex);
             printf("Stopped reading a file. \n");
@@ -96,7 +99,6 @@ void *producer(){
         }
         pthread_mutex_unlock(&buff_mutex);
     }
-    return NULL;
 }
 
 /* TODO - ARGUMENTS CHECKING WITH ERRORS */
@@ -117,26 +119,30 @@ void read_config(char *path){
 
 void manage_threads(){
     
-    pid_t producers [P];
-    pid_t consumers [K];
+    pthread_t producers [P];
+    pthread_t consumers [K];
 
     for(int i = 0; i < P; i++){
-         pthread_create(&producers[i],NULL,producer,NULL);
+        pthread_create(&producers[i],NULL,&producer,NULL);
     }
     
      for(int i = 0; i < K; i++){
-         pthread_create(&consumers[i],NULL,client,NULL);
+        pthread_create(&consumers[i],NULL,&client,NULL);
     }
 
-    //  for(int i = 0; i < P; i++){
-    //      pthread_join(producers[i],NULL);
-    // }
-    //  for(int i = 0; i < K; i++){
-    //      pthread_join(consumers[i],NULL);
-    // }
+     for(int i = 0; i < P; i++){
+        pthread_join(producers[i],NULL);
+    }
 
-    free(consumers);
-    free(producers);
+    while (1){
+        pthread_mutex_lock(&buff_mutex);
+        if (inside == 0) break;
+        pthread_mutex_unlock(&buff_mutex);
+    }
+
+
+   // free(consumers);
+   // free(producers);
 }
 
 void sighandler(int signum){
@@ -173,4 +179,5 @@ int main(int argc, char **argv){
     file_handle = fopen(filename,"r");
     fseek(file_handle,0,0); //for every time to start from the begining
     manage_threads();
+    exit(0);
 }
