@@ -118,7 +118,6 @@ void read_config(char *path){
 }
 
 void manage_threads(){
-    
     pthread_t producers [P];
     pthread_t consumers [K];
 
@@ -134,6 +133,10 @@ void manage_threads(){
         pthread_join(producers[i],NULL);
     }
 
+     for(int i = 0; i < K; i++){
+        pthread_join(consumers[i],NULL);
+    }
+
     while (1){
         pthread_mutex_lock(&buff_mutex);
         if (inside == 0) break;
@@ -141,8 +144,8 @@ void manage_threads(){
     }
 
 
-   // free(consumers);
-   // free(producers);
+   free(consumers);
+   free(producers);
 }
 
 void sighandler(int signum){
