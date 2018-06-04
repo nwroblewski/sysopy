@@ -15,6 +15,7 @@ int N;
 int ended = 0;
 char *filename;
 int L;  
+int flaga = 0;
 int search_mode;  // 0 - producer doesn't print info about reading from file, 1 - does
 int view_mode;  // 0 - equal L , 1 - greater than L, 2 - less than L
 int nk;
@@ -39,8 +40,8 @@ void *client(){
         pthread_mutex_lock(&buff_mutex);
         while(inside <= 0){
             if(ended == P){
-                //printf("duperka");
                 pthread_mutex_unlock(&buff_mutex);
+                flaga = 1;
                 pthread_kill(consumers[0],SIGINT);
             }
             pthread_cond_wait(&buff_empty,&buff_mutex);
@@ -51,7 +52,7 @@ void *client(){
 
 
         if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = '\0';
-        if(strlen(line) != 1){
+        if(1){
             int check;
             switch(view_mode){
                 case 0: check = (strlen(line) == L); 
@@ -65,8 +66,8 @@ void *client(){
             }
             if(check) printf("Index: %i, content: %s \n",consumer_pos,line);
         }
-        if(line) free(line);
-        if(buffer[consumer_pos]) free(buffer[consumer_pos]);        
+        free(line);
+        free(buffer[consumer_pos]);        
         consumer_pos = (consumer_pos + 1) % N;
         inside --;
         if(inside == N - 1) pthread_cond_broadcast(&buff_full);
@@ -132,7 +133,10 @@ void read_config(char *path){
 void manage_threads(){
 
     for(int i = 0; i < P; i++){
-        pthread_create(&producers[i],NULL,&producer,NULL);
+        if(pthread_create(&producers[i],NULL,&producer,NULL) != 0){
+            printf("There was a problem with creating a thread!");
+            exit(0);
+        }
     }
     
      for(int i = 0; i < K; i++){
@@ -147,8 +151,8 @@ void manage_threads(){
         pthread_join(consumers[i],NULL);
     }
 
-   free(consumers);
-   free(producers);
+    if(consumers) free(consumers);
+    if(producers) free(producers);
 }
 
 void clean_up(){
@@ -162,7 +166,7 @@ void clean_up(){
 
 void sighandler(int signum){
     printf("Caught signal. Aborting. \n");
-    pthread_kill(consumers[0],SIGINT);
+    if(!flaga) pthread_kill(consumers[0],SIGINT);
     exit(0);
 }
 
@@ -173,7 +177,6 @@ int main(int argc, char **argv){
     atexit(*clean_up);
     signal(SIGINT,sighandler);
     signal(SIGALRM,sighandler);
-    signal(SIGKILL,clean_up);
     if(argc != 2){
         printf("Provide me with proper arguments! <config_filename>\n");
         exit(EXIT_FAILURE);
