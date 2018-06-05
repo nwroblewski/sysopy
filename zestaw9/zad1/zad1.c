@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <unistd.h>
 
+int got = 0;
 int P;
 int K;
 int N;
@@ -38,9 +39,6 @@ void *client(){
     while(1){
         pthread_mutex_lock(&buff_mutex);
         while(inside <= 0){
-            if(ended == P){
-                pthread_mutex_unlock(&buff_mutex);
-            }
             pthread_cond_wait(&buff_empty,&buff_mutex);
         }
     
@@ -49,7 +47,7 @@ void *client(){
 
 
         if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = '\0';
-        if(1){
+        if(line[0] != '\0' && line != NULL){
             int check;
             switch(view_mode){
                 case 0: check = (strlen(line) == L); 
@@ -63,14 +61,12 @@ void *client(){
             }
             if(check) printf("Index: %i, content: %s \n",consumer_pos,line);
         }
-        free(line);
-        free(buffer[consumer_pos]);        
+        if(line) free(line);
+        if(buffer[consumer_pos]) free(buffer[consumer_pos]);        
         consumer_pos = (consumer_pos + 1) % N;
         inside --;
         if(inside == N - 1) pthread_cond_broadcast(&buff_full);
         pthread_mutex_unlock(&buff_mutex);
-     //   printf("lol \n");
-        
     }
     return NULL;
 }
@@ -111,7 +107,6 @@ void *producer(){
     return NULL;
 }
 
-/* TODO - ARGUMENTS CHECKING WITH ERRORS */
 
 void read_config(char *path){
     filename = malloc(sizeof(char)*100);
@@ -130,10 +125,7 @@ void read_config(char *path){
 void manage_threads(){
 
     for(int i = 0; i < P; i++){
-        if(pthread_create(&producers[i],NULL,&producer,NULL) != 0){
-            printf("There was a problem with creating a thread!");
-            exit(0);
-        }
+        pthread_create(&producers[i],NULL,&producer,NULL);
     }
     
     for(int i = 0; i < K; i++){
@@ -145,15 +137,20 @@ void manage_threads(){
         pthread_join(producers[i],NULL);
     }
 
+    while (1){
+        pthread_mutex_lock(&buff_mutex);
+        if (inside == 0) break;
+        pthread_mutex_unlock(&buff_mutex);
+    }
+
 }
 
 void clean_up(){
-  
+    if(got);
     for(int i = 0; i< K; i++){
         pthread_cancel(consumers[i]);
     }
-
-    fclose(file_handle);
+    if(file_handle) fclose(file_handle);
     if(buffer) free(buffer);
     pthread_mutex_destroy(&buff_mutex);
     pthread_cond_destroy(&buff_empty);
@@ -176,6 +173,7 @@ int main(int argc, char **argv){
         printf("Provide me with proper arguments! <config_filename>\n");
         exit(EXIT_FAILURE);
     }
+    got = 1;
     read_config(argv[1]);
     if(nk > 0){
         alarm(nk);
