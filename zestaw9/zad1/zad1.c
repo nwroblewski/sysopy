@@ -15,14 +15,13 @@ int N;
 int ended = 0;
 char *filename;
 int L;  
-int flaga = 0;
 int search_mode;  // 0 - producer doesn't print info about reading from file, 1 - does
 int view_mode;  // 0 - equal L , 1 - greater than L, 2 - less than L
 int nk;
 char **buffer;
 int producer_pos = 0; // first ready-to-write position in buffer
 int consumer_pos = 0; // first ready-to-read position in buffer
-int inside = 0;
+int inside = 0; // number of lines elements currently in buffer
 FILE *file_handle;
 pthread_t *producers;
 pthread_t *consumers;
@@ -41,8 +40,6 @@ void *client(){
         while(inside <= 0){
             if(ended == P){
                 pthread_mutex_unlock(&buff_mutex);
-                flaga = 1;
-                pthread_kill(consumers[0],SIGINT);
             }
             pthread_cond_wait(&buff_empty,&buff_mutex);
         }
@@ -139,24 +136,23 @@ void manage_threads(){
         }
     }
     
-     for(int i = 0; i < K; i++){
+    for(int i = 0; i < K; i++){
         pthread_create(&consumers[i],NULL,&client,NULL);
     }
 
-     for(int i = 0; i < P; i++){
+
+    for(int i = 0; i < P; i++){
         pthread_join(producers[i],NULL);
     }
 
-     for(int i = 0; i < K; i++){
-        pthread_join(consumers[i],NULL);
-    }
-
-    if(consumers) free(consumers);
-    if(producers) free(producers);
 }
 
 void clean_up(){
-    printf("I am cleaning. \n");
+  
+    for(int i = 0; i< K; i++){
+        pthread_cancel(consumers[i]);
+    }
+
     fclose(file_handle);
     if(buffer) free(buffer);
     pthread_mutex_destroy(&buff_mutex);
@@ -166,7 +162,6 @@ void clean_up(){
 
 void sighandler(int signum){
     printf("Caught signal. Aborting. \n");
-    if(!flaga) pthread_kill(consumers[0],SIGINT);
     exit(0);
 }
 
@@ -193,5 +188,6 @@ int main(int argc, char **argv){
     }
     file_handle = fopen(filename,"r");
     manage_threads();
+    while(nk);
     return 0;
 }
