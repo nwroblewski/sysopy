@@ -9,7 +9,6 @@
 #include <signal.h>
 #include <unistd.h>
 
-int got = 0;
 int P;
 int K;
 int N;
@@ -142,7 +141,8 @@ void manage_threads(){
 }
 
 void clean_up(){
-    if(got);
+    printf("Cleaning \n");
+    if(consumers);
     for(int i = 0; i< K; i++){
         pthread_cancel(consumers[i]);
     }
@@ -169,7 +169,6 @@ int main(int argc, char **argv){
         printf("Provide me with proper arguments! <config_filename>\n");
         exit(EXIT_FAILURE);
     }
-    got = 1;
     read_config(argv[1]);
     if(nk > 0){
         alarm(nk);
