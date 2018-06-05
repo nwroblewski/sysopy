@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <semaphore.h>
 
+
 int P;
 int K;
 int N;
@@ -68,8 +69,7 @@ void *client(){
         sem_wait(&empty_buff_sem);
         sem_wait(&buff_sem);
 
-        // char *line = malloc(sizeof(char) * 512);
-        // strcpy(line,buffer[consumer_pos]);
+
         line = buffer[consumer_pos];
         buffer[consumer_pos] = NULL;
         
@@ -89,7 +89,6 @@ void *client(){
             if(check) printf("Index: %i, content: %s \n",consumer_pos,line);
         }
         if(line) free(line);
-        //if(buffer[consumer_pos]) free(buffer[consumer_pos]);        
         consumer_pos = (consumer_pos + 1) % N;
         inside --;
         sem_post(&full_buff_sem);
