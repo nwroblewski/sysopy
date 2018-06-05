@@ -44,12 +44,11 @@ void *producer(){
             printf("Stopped reading a file. \n");
             break;
         }
-        buffer[producer_pos] = malloc(sizeof(char)*size);
-        strcpy(buffer[producer_pos],line);
+        buffer[producer_pos] = strcpy(malloc(sizeof(char)*size),line);
         if(line){
             free(line);
             line = NULL;
-        }        
+        }
         
         //If printing mode is needed
         if(search_mode) printf("Producer puts line at %i. It's %i line in the buffer.\n",producer_pos,inside);
@@ -63,15 +62,17 @@ void *producer(){
 }
 
 void *client(){
+    char *line;
     while(1){
         
         sem_wait(&empty_buff_sem);
         sem_wait(&buff_sem);
 
-        char *line = malloc(sizeof(char) * 512);
-        strcpy(line,buffer[consumer_pos]);
-
-
+        // char *line = malloc(sizeof(char) * 512);
+        // strcpy(line,buffer[consumer_pos]);
+        line = buffer[consumer_pos];
+        buffer[consumer_pos] = NULL;
+        
         if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = '\0';
         if(line[0] != '\0' && line != NULL){
             int check;
@@ -88,7 +89,7 @@ void *client(){
             if(check) printf("Index: %i, content: %s \n",consumer_pos,line);
         }
         if(line) free(line);
-        if(buffer[consumer_pos]) free(buffer[consumer_pos]);        
+        //if(buffer[consumer_pos]) free(buffer[consumer_pos]);        
         consumer_pos = (consumer_pos + 1) % N;
         inside --;
         sem_post(&full_buff_sem);
