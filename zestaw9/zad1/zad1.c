@@ -13,7 +13,6 @@ int got = 0;
 int P;
 int K;
 int N;
-int ended = 0;
 char *filename;
 int L;  
 int search_mode;  // 0 - producer doesn't print info about reading from file, 1 - does
@@ -36,15 +35,15 @@ pthread_cond_t buff_full = PTHREAD_COND_INITIALIZER;
 /* Threads routines, for producer and client */
 
 void *client(){
+    char *line;
     while(1){
         pthread_mutex_lock(&buff_mutex);
         while(inside <= 0){
             pthread_cond_wait(&buff_empty,&buff_mutex);
         }
     
-        char *line = malloc(sizeof(char) * 512);
-        strcpy(line,buffer[consumer_pos]);
-
+        line = buffer[consumer_pos];
+        buffer[consumer_pos] = NULL;
 
         if (line[strlen(line)-1] == '\n') line[strlen(line)-1] = '\0';
         if(line[0] != '\0' && line != NULL){
@@ -62,7 +61,6 @@ void *client(){
             if(check) printf("Index: %i, content: %s \n",consumer_pos,line);
         }
         if(line) free(line);
-        if(buffer[consumer_pos]) free(buffer[consumer_pos]);        
         consumer_pos = (consumer_pos + 1) % N;
         inside --;
         if(inside == N - 1) pthread_cond_broadcast(&buff_full);
@@ -84,7 +82,6 @@ void *producer(){
         if(getline(&line,&size,file_handle) <=0){
             pthread_mutex_unlock(&buff_mutex);
             printf("Stopped reading a file. \n");
-            ended++;
             break;
         }
         buffer[producer_pos] = malloc(sizeof(char)*size);
@@ -119,7 +116,7 @@ void read_config(char *path){
     fscanf(file,"%i",&search_mode);
     fscanf(file,"%i",&view_mode);
     fscanf(file,"%i",&nk);
-    //printf("P: %d, K: %d, N: %d, filename: %s, L: %d ,search: %d, view: %d, nk: %d \n",P,K,N,filename,L,search_mode,view_mode,nk);
+    fclose(file);
 }
 
 void manage_threads(){
@@ -142,7 +139,6 @@ void manage_threads(){
         if (inside == 0) break;
         pthread_mutex_unlock(&buff_mutex);
     }
-
 }
 
 void clean_up(){
